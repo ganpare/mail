@@ -26,10 +26,18 @@ RUN mkdir -p /var/spool/postfix/private && \
 
 # 仮想アドレスマップの作成
 RUN mkdir -p /etc/postfix && \
-    echo "recipient@example.local user" > /etc/postfix/virtual && \
+    echo "recipient@example.local test" > /etc/postfix/virtual && \
     postmap /etc/postfix/virtual && \
     postconf -e "smtpd_helo_required=yes" && \
     postconf -e "virtual_alias_maps=hash:/etc/postfix/virtual"
+
+# メールスプールディレクトリの作成
+RUN mkdir -p /var/mail && \
+    chmod 755 /var/mail && \
+    chown postfix:postfix /var/mail
+
+# ローカルメール用ユーザーの作成
+RUN useradd -m -s /bin/bash test
 
 # エイリアスマップを更新
 RUN newaliases

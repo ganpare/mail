@@ -12,3 +12,4 @@ verify    unix  -       -       n       -       1       verify
 relay     unix  -       -       n       -       -       smtp
 smtp      unix  -       -       n       -       -       smtp
 retry     unix  -       -       n       -       -       error
+local     unix  -       n       n       -       -       local
