@@ -1,0 +1,11 @@
+$TTL    86400
+@       IN      SOA     example.local. root.example.local. (
+                            1         ; Serial
+                        604800         ; Refresh
+                         86400         ; Retry
+                       2419200         ; Expire
+                         604800 )      ; Negative TTL
+        IN      NS      ns.example.local.
+5       IN      PTR     app.example.local.
+6       IN      PTR     client.example.local.
+7       IN      PTR     pop3.example.local.

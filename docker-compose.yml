@@ -1,0 +1,77 @@
+services:
+  dns-server:
+    image: ubuntu/bind9
+    container_name: dns-server
+    networks:
+      mail_network:
+        ipv4_address: 172.19.0.3
+    ports:
+      - "53:53/udp"
+    volumes:
+      - ./bind:/etc/bind
+    restart: always
+
+  smtp-server:
+    build:
+      context: ./  # ビルドのコンテキストをルートディレクトリに設定
+      dockerfile: ./smtp/Dockerfile  # SMTPサーバー用Dockerfileを明示的に指定
+    container_name: smtp-server
+    networks:
+      mail_network:
+        ipv4_address: 172.19.0.4
+    environment:
+      MAILNAME: smtp.example.local
+    ports:
+      - "1025:25"
+    restart: always
+
+
+  pop3-server:
+    build:
+      context: ./pop3
+    container_name: pop3-server
+    networks:
+      mail_network:
+        ipv4_address: 172.19.0.7
+    ports:
+      - "110:110"    # POP3ポート
+    volumes:
+      - ./pop3/dovecot:/etc/dovecot
+      - ./mail:/var/mail
+    restart: always
+    depends_on:
+      - smtp-server
+      
+  app-server:
+    build: ./app-server
+    container_name: app-server
+    networks:
+      mail_network:
+        ipv4_address: 172.19.0.5
+    dns:
+      - 172.19.0.3
+    environment:
+      SMTP_SERVER: smtp.example.local
+    depends_on:
+      - dns-server
+      - smtp-server
+    command: ["sh", "-c", "python3 send_mail.py && tail -f /dev/null"]
+
+  client:
+    build: ./client
+    container_name: client
+    networks:
+      mail_network:
+        ipv4_address: 172.19.0.6
+    dns:
+      - 172.19.0.3
+    stdin_open: true
+    tty: true
+    command: sleep infinity
+
+networks:
+  mail_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.19.0.0/16
