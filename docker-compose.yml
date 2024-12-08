@@ -37,7 +37,8 @@ services:
 
   pop3-server:
     build:
-      context: ./pop3
+      context: ./  # ルートディレクトリをコンテキストに設定
+      dockerfile: ./pop3/Dockerfile  # Dockerfileの場所を明示
     container_name: pop3-server
     networks:
       mail_network:
@@ -45,11 +46,12 @@ services:
     ports:
       - "110:110"    # POP3ポート
     volumes:
-      - ./pop3/dovecot:/etc/dovecot
-      - ./mail:/var/mail
+      - ./etc/dovecot:/etc/dovecot  # etc/dovecot をマウント
+      - ./mail:/var/mail           # mail ディレクトリをマウント
     restart: always
     depends_on:
       - smtp-server
+
       
   app-server:
     build: ./app-server

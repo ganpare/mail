@@ -15,6 +15,7 @@ mydestination = $myhostname, localhost.$mydomain, localhost, example.local
 
 # その他
 smtpd_banner = $myhostname ESMTP $mail_name
+home_mailbox = Maildir/
 
 # デバッグ用設定
 debug_peer_level = 2
