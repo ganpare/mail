@@ -4,15 +4,14 @@ mydomain = example.local
 myorigin = $mydomain
 
 # ネットワーク設定
-inet_interfaces = localhost, 172.19.0.4
+inet_interfaces = all
 mynetworks = 127.0.0.0/8 [::1]/128 172.19.0.0/16
 
 # メールリレー制限（必須設定）
 smtpd_relay_restrictions = permit_mynetworks, reject_unauth_destination
 
 # メール配送設定
-mydestination = $myhostname, localhost.$mydomain, localhost
-relayhost =
+mydestination = $myhostname, localhost.$mydomain, localhost, example.local
 
 # その他
 smtpd_banner = $myhostname ESMTP $mail_name
@@ -23,7 +22,7 @@ debug_peer_list = 127.0.0.1
 debugger_command =
     PATH=/bin:/usr/bin:/usr/local/bin:/usr/X11R6/bin
     ddd $daemon_directory/$process_name $process_id & sleep 5
-    
+
 compatibility_level = 2
 # TLSの設定
 smtpd_tls_security_level = none

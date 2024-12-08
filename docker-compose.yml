@@ -29,6 +29,8 @@ services:
       MAILNAME: smtp.example.local
     ports:
       - "1025:25"
+    volumes:
+      - ./smtp_aliases:/etc/aliases # smtp_aliases を /etc/aliases にマウント
     restart: always
     depends_on:
       - dns-server

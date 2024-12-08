@@ -24,10 +24,18 @@ RUN echo "root: postmaster" > /etc/aliases
 RUN mkdir -p /var/spool/postfix/private && \
     chown -R postfix:postfix /var/spool/postfix/private
 
+# 仮想アドレスマップの作成
+RUN mkdir -p /etc/postfix && \
+    echo "recipient@example.local user" > /etc/postfix/virtual && \
+    postmap /etc/postfix/virtual && \
+    postconf -e "smtpd_helo_required=yes" && \
+    postconf -e "virtual_alias_maps=hash:/etc/postfix/virtual"
+
+# エイリアスマップを更新
+RUN newaliases
 
 # ログの設定
 RUN echo "*.* /var/log/mail.log" > /etc/rsyslog.d/50-default.conf
-
 
 # コンテナ起動時のコマンド
 CMD ["sh", "-c", "service rsyslog start && postfix start-fg"]
