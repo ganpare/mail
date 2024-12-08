@@ -1,11 +1,13 @@
 $TTL    86400
 @       IN      SOA     example.local. root.example.local. (
-                            1         ; Serial
+                            2         ; Serial        ; シリアル番号を更新
                         604800         ; Refresh
                          86400         ; Retry
                        2419200         ; Expire
                          604800 )      ; Negative TTL
-        IN      NS      ns.example.local.
-5       IN      PTR     app.example.local.
-6       IN      PTR     client.example.local.
-7       IN      PTR     pop3.example.local.
+        IN      NS      ns.example.local.             ; ネームサーバーの指定
+3       IN      PTR     ns.example.local.             ; ns のリバースエントリ
+4       IN      PTR     smtp.example.local.           ; smtp のリバースエントリ
+5       IN      PTR     app.example.local.            ; app のリバースエントリ
+6       IN      PTR     client.example.local.         ; client のリバースエントリ
+7       IN      PTR     pop3.example.local.           ; pop3 のリバースエントリ

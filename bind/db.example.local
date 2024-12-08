@@ -1,18 +1,21 @@
 $TTL    86400                    ; デフォルトのキャッシュ期間（秒単位）
 @       IN      SOA     example.local. root.example.local. (
-                            3         ; Serial        ; ゾーンファイルのバージョン番号
+                            4         ; Serial        ; ゾーンファイルのバージョン番号を更新
                         604800         ; Refresh      ; セカンダリDNSがデータを更新する間隔
                          86400         ; Retry        ; セカンダリDNSが再試行する間隔
                        2419200         ; Expire       ; データが無効になるまでの期間
                          604800 )      ; Negative TTL ; クエリが失敗した場合のキャッシュ期間
         IN      NS      ns.example.local.             ; このゾーンのネームサーバ
 ns      IN      A       172.19.0.3  ; DNSサーバのIPアドレス
+example.local.  IN      A       172.19.0.3  ; ドメイン自身のAレコード
 smtp    IN      A       172.19.0.4  ; SMTPサーバのIPアドレス
 app     IN      A       172.19.0.5  ; アプリサーバのIPアドレス
 client  IN      A       172.19.0.6  ; クライアントのIPアドレス
 pop3    IN      A       172.19.0.7  ; POP3サーバのIPアドレス
 
 ; リバースDNSエントリ
-5 IN PTR app.example.local.
-6 IN PTR client.example.local.
-7 IN PTR pop3.example.local.
+3       IN      PTR     ns.example.local.  ; ns のリバースエントリ
+4       IN      PTR     smtp.example.local. ; smtp のリバースエントリ
+5       IN      PTR     app.example.local.
+6       IN      PTR     client.example.local.
+7       IN      PTR     pop3.example.local.

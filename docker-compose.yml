@@ -1,6 +1,8 @@
 services:
   dns-server:
-    image: ubuntu/bind9
+    build:
+      context: ./  # ルートディレクトリをコンテキストに設定
+      dockerfile: ./bind/Dockerfile  # Dockerfileの場所を明示的に指定
     container_name: dns-server
     networks:
       mail_network:
@@ -11,6 +13,8 @@ services:
       - ./bind:/etc/bind
     restart: always
 
+
+
   smtp-server:
     build:
       context: ./  # ビルドのコンテキストをルートディレクトリに設定
@@ -19,12 +23,15 @@ services:
     networks:
       mail_network:
         ipv4_address: 172.19.0.4
+    dns:
+      - 172.19.0.3  # DNSサーバーのIPを明示
     environment:
       MAILNAME: smtp.example.local
     ports:
       - "1025:25"
     restart: always
-
+    depends_on:
+      - dns-server
 
   pop3-server:
     build:
