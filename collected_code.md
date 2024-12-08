@@ -25,14 +25,14 @@
 │   └── nsswitch.conf
 ├── mail/
 ├── pop3/
-│   ├── dovecot/
 │   └── Dockerfile
 ├── smtp/
 │   ├── Dockerfile
 │   ├── Dockerfile.manual
 │   └── init.sh
 ├── docker-compose.yml
-└── smtp_aliases
+├── smtp_aliases
+└── よく使うコマンド
 
 ```
 
@@ -40,16 +40,18 @@
 
 **Language:** yml
 
-**File Size:** 2275 bytes
+**File Size:** 2164 bytes
 **Created:** 2024-12-08T20:25:28.565683
-**Modified:** 2024-12-08T21:46:53.574253
+**Modified:** 2024-12-09T06:51:55.448169
 
 ```yml
+version: '3.8'
+
 services:
   dns-server:
     build:
-      context: ./  # ルートディレクトリをコンテキストに設定
-      dockerfile: ./bind/Dockerfile  # Dockerfileの場所を明示的に指定
+      context: ./ 
+      dockerfile: ./bind/Dockerfile
     container_name: dns-server
     networks:
       mail_network:
@@ -60,32 +62,35 @@ services:
       - ./bind:/etc/bind
     restart: always
 
+smtp-server:
+  build:
+    context: ./
+    dockerfile: ./smtp/Dockerfile
+  container_name: smtp-server
+  networks:
+    mail_network:
+      ipv4_address: 172.19.0.4
+  dns:
+    - 172.19.0.3
+  environment:
+    MAILNAME: smtp.example.local
+  ports:
+    - "1025:25"
+  volumes:
+    - ./smtp_aliases:/etc/aliases
+    - mail_data:/var/mail      # 共有ボリュームをマウント
+    - ./smtp_config/postfix/main.cf:/etc/postfix/main.cf
+    - ./smtp_config/postfix/master.cf:/etc/postfix/master.cf
+    - ./smtp_config/postfix/virtual:/etc/postfix/virtual
+  restart: always
+  depends_on:
+    - dns-server
 
-
-  smtp-server:
-    build:
-      context: ./  # ビルドのコンテキストをルートディレクトリに設定
-      dockerfile: ./smtp/Dockerfile  # SMTPサーバー用Dockerfileを明示的に指定
-    container_name: smtp-server
-    networks:
-      mail_network:
-        ipv4_address: 172.19.0.4
-    dns:
-      - 172.19.0.3  # DNSサーバーのIPを明示
-    environment:
-      MAILNAME: smtp.example.local
-    ports:
-      - "1025:25"
-    volumes:
-      - ./smtp_aliases:/etc/aliases # smtp_aliases を /etc/aliases にマウント
-    restart: always
-    depends_on:
-      - dns-server
 
   pop3-server:
     build:
-      context: ./  # ルートディレクトリをコンテキストに設定
-      dockerfile: ./pop3/Dockerfile  # Dockerfileの場所を明示
+      context: ./ 
+      dockerfile: ./pop3/Dockerfile
     container_name: pop3-server
     networks:
       mail_network:
@@ -93,13 +98,13 @@ services:
     ports:
       - "110:110"    # POP3ポート
     volumes:
-      - ./etc/dovecot:/etc/dovecot  # etc/dovecot をマウント
-      - ./mail:/var/mail           # mail ディレクトリをマウント
+      - ./etc/dovecot:/etc/dovecot
+      - mail_data:/var/mail           # 共有ボリュームをマウント
+      - mail_data:/var/log/dovecot    # ログも共有（オプション）
     restart: always
     depends_on:
       - smtp-server
 
-      
   app-server:
     build: ./app-server
     container_name: app-server
@@ -134,6 +139,9 @@ networks:
       config:
         - subnet: 172.19.0.0/16
 
+volumes:
+  mail_data:
+
 ```
 
 ### File: `smtp_aliases`
@@ -147,6 +155,63 @@ networks:
 ```
 postmaster:    root
 recipient: user  # recipient@example.local を pop3-server の user に転送
+```
+
+### File: `よく使うコマンド`
+
+**Language:** 
+
+**File Size:** 1247 bytes
+**Created:** 2024-12-08T23:51:52.936979
+**Modified:** 2024-12-08T23:51:56.037352
+
+```
+docker-compose down
+docker-compose up --build -d
+docker exec -it smtp-server nslookup example.local
+docker exec -it app-server nslookup example.local
+docker exec -it client nslookup example.local
+docker exec -it app-server python3 /app/send_mail.py
+docker exec -it smtp-server tail -f /var/log/mail.log
+
+docker ps
+
+
+docker exec -it dns-server bash
+docker exec -it app-server bash
+docker exec -it smtp-server bash
+docker exec -it client sh
+
+
+dig example.local @127.0.0.1
+dig -x 172.19.0.4 @127.0.0.1
+
+
+docker-compose build smtp-server
+docker-compose up -d smtp-server
+
+docker-compose build
+docker-compose up -d
+
+
+docker exec -it smtp-server ls -l /var/mail
+
+docker exec -it smtp-server ls -ld /var/mail/test
+
+docker exec -it smtp-server ls -ld /var/mail/test/Maildir
+
+
+docker exec -it smtp-server ls -ld /var/mail/test/Maildir/new
+
+docker exec -it smtp-server ls -ld /var/mail/test/Maildir/cur
+docker exec -it smtp-server ls -ld /var/mail/test/Maildir/new
+docker exec -it smtp-server ls -ld /var/mail/test/Maildir/tmp
+
+
+docker exec -it smtp-server ls -l /var/mail/test/Maildir/cur
+docker exec -it smtp-server ls -l /var/mail/test/Maildir/new
+docker exec -it smtp-server ls -l /var/mail/test/Maildir/tmp
+
 ```
 
 ### File: `app-server\Dockerfile`
@@ -423,33 +488,34 @@ netgroup:       nis
 
 **Language:** conf
 
-**File Size:** 619 bytes
+**File Size:** 378 bytes
 **Created:** 2024-12-07T14:17:38.497898
-**Modified:** 2024-12-07T14:17:43.729303
+**Modified:** 2024-12-09T06:42:10.224698
 
 ```conf
-disable_plaintext_auth = no   # 平文認証を許可（テスト用）
-listen = *                   # 全てのインターフェースでリッスン
-mail_location = mbox:/var/mail/%u   # 各ユーザーのメールスプール
+disable_plaintext_auth = no
+listen = *
+mail_location = maildir:/var/mail/%u/Maildir   # ユーザーのMAILDIRを指定
 
-protocols = pop3             # POP3プロトコルを有効化
+protocols = pop3
 
 service pop3-login {
   inet_listener pop3 {
-    port = 110               # POP3のデフォルトポート
+    port = 110
   }
 }
 
 passdb {
-  driver = passwd-file       # ユーザー認証にファイルを使用
+  driver = passwd-file
   args = /etc/dovecot/users
 }
 
 userdb {
-  driver = passwd
+  driver = passwd-file
+  args = /etc/dovecot/users
 }
 
-auth_mechanisms = plain      # 認証方式
+auth_mechanisms = plain
 
 ```
 
@@ -457,12 +523,12 @@ auth_mechanisms = plain      # 認証方式
 
 **Language:** 
 
-**File Size:** 61 bytes
+**File Size:** 51 bytes
 **Created:** 2024-12-07T14:17:59.085351
-**Modified:** 2024-12-07T14:18:05.981058
+**Modified:** 2024-12-08T23:50:35.351398
 
 ```
-user:{PLAIN}password:1000:1000::/var/mail/user::userdb_mail
+test:{PLAIN}password:1000:1000::/var/mail/test:::
 
 ```
 
@@ -470,9 +536,9 @@ user:{PLAIN}password:1000:1000::/var/mail/user::userdb_mail
 
 **Language:** cf
 
-**File Size:** 898 bytes
+**File Size:** 1007 bytes
 **Created:** 2024-12-07T11:40:37.585436
-**Modified:** 2024-12-08T22:01:08.121697
+**Modified:** 2024-12-09T06:47:35.078729
 
 ```cf
 # サーバ設定
@@ -488,7 +554,11 @@ mynetworks = 127.0.0.0/8 [::1]/128 172.19.0.0/16
 smtpd_relay_restrictions = permit_mynetworks, reject_unauth_destination
 
 # メール配送設定
-mydestination = $myhostname, localhost.$mydomain, localhost, example.local
+mydestination = $myhostname, localhost.$mydomain, localhost
+
+# 仮想エイリアス設定
+virtual_alias_domains = example.local
+virtual_alias_maps = hash:/etc/postfix/virtual
 
 # その他
 smtpd_banner = $myhostname ESMTP $mail_name
@@ -502,12 +572,14 @@ debugger_command =
     ddd $daemon_directory/$process_name $process_id & sleep 5
 
 compatibility_level = 2
+
 # TLSの設定
 smtpd_tls_security_level = none
 smtp_tls_security_level = may
 
 # 接続タイムアウトの設定
 smtpd_helo_required = yes
+
 ```
 
 ### File: `etc\postfix\master.cf`
@@ -561,9 +633,9 @@ showq     unix  n       -       n       -       -       showq
 
 **Language:** 
 
-**File Size:** 710 bytes
+**File Size:** 1428 bytes
 **Created:** 2024-12-07T14:16:55.544774
-**Modified:** 2024-12-08T21:45:28.011748
+**Modified:** 2024-12-08T23:53:18.748005
 
 ```
 FROM debian:bullseye-slim
@@ -574,18 +646,33 @@ RUN apt-get update && apt-get install -y \
     dovecot-core \
     && apt-get clean
 
+# ローカルユーザーとグループの作成
+# UIDとGIDはsmtp-serverと一致させる（ここでは1000）
+RUN groupadd -g 1000 test && \
+    useradd -m -s /bin/bash -u 1000 -g test test
+
 # Dovecotの設定ファイルを適切な場所にコピー
 COPY etc/dovecot/dovecot.conf /etc/dovecot/dovecot.conf
 COPY etc/dovecot/users /etc/dovecot/users
 
-# メールスプールディレクトリを作成
-RUN mkdir -p /var/mail && \
-    chmod -R 755 /var/mail && \
-    chown -R dovecot:dovecot /var/mail
+# メールスプールディレクトリとMaildir構造の作成
+RUN mkdir -p /var/mail/test/Maildir/{cur,new,tmp} && \
+    chown -R test:test /var/mail/test && \
+    chmod -R 700 /var/mail/test
 
 # Dovecotのユーザー情報ファイルの権限を設定
 RUN chmod 600 /etc/dovecot/users && \
-    chown dovecot:dovecot /etc/dovecot/users
+    chown test:test /etc/dovecot/users
+
+# Dovecotのログディレクトリを作成
+RUN mkdir -p /var/log/dovecot && \
+    touch /var/log/dovecot/dovecot.log && \
+    chown test:test /var/log/dovecot/dovecot.log
+
+# Dovecotのログ設定を更新（必要に応じて）
+RUN echo "log_path = /var/log/dovecot/dovecot.log" >> /etc/dovecot/conf.d/10-logging.conf && \
+    echo "auth_verbose = yes" >> /etc/dovecot/conf.d/10-auth.conf && \
+    echo "mail_debug = yes" >> /etc/dovecot/conf.d/10-mail.conf
 
 # デフォルトコマンド
 CMD ["dovecot", "-F"]
@@ -596,9 +683,9 @@ CMD ["dovecot", "-F"]
 
 **Language:** 
 
-**File Size:** 1893 bytes
+**File Size:** 1623 bytes
 **Created:** 2024-12-07T11:17:12.979747
-**Modified:** 2024-12-08T23:18:31.642045
+**Modified:** 2024-12-09T06:50:54.136784
 
 ```
 FROM debian:bullseye-slim
@@ -619,46 +706,39 @@ RUN apt-get update && apt-get install -y \
     dpkg-reconfigure -f noninteractive tzdata && \
     apt-get clean
 
-
-# ローカルメール用ユーザーの作成
+# ローカルユーザーとグループの作成
 RUN groupadd -g 1000 test && \
-    useradd -m -s /bin/bash -u 1000 -g 1000 test && \
-    groupadd -g 1001 user && \
-    useradd -m -s /bin/bash -u 1001 -g 1001 user
+    useradd -m -s /bin/bash -u 1000 -g test -d /var/mail/test test
 
-# メールスプールディレクトリとMaildir構造の作成
-RUN mkdir -p /var/mail/test/Maildir/cur && \
-    mkdir -p /var/mail/test/Maildir/new && \
-    mkdir -p /var/mail/test/Maildir/tmp && \
-    chmod -R 755 /var/mail && \
-    chown -R test:test /var/mail
+# Maildir ディレクトリの作成と権限設定
+RUN mkdir -p /var/mail/test/Maildir/{cur,new,tmp} && \
+    chown -R test:test /var/mail/test && \
+    chmod -R 700 /var/mail/test
 
+# Postfix の設定ファイルをコピー
+COPY smtp_config/postfix/main.cf /etc/postfix/main.cf
+COPY smtp_config/postfix/master.cf /etc/postfix/master.cf
+COPY smtp_config/postfix/virtual /etc/postfix/virtual
 
-# Postfixの設定ファイルをコピー
-COPY etc/postfix/main.cf /etc/postfix/main.cf
-COPY etc/postfix/master.cf /etc/postfix/master.cf
+# 仮想エイリアスマップのコンパイル
+RUN postmap /etc/postfix/virtual
 
-# /etc/aliases ファイルの作成（ただし newaliases は後で実行）
-RUN echo "root: postmaster" > /etc/aliases
+# /etc/aliases の設定と更新
+RUN echo "postmaster: root" > /etc/aliases && \
+    newaliases
 
-# 必要なソケットディレクトリを作成し、所有権を設定
-RUN mkdir -p /var/spool/postfix/private && \
-    chown -R postfix:postfix /var/spool/postfix/private
-
-# 仮想アドレスマップの作成
-RUN mkdir -p /etc/postfix && \
-    echo "recipient@example.local test" > /etc/postfix/virtual && \
-    postmap /etc/postfix/virtual && \
-    postconf -e "smtpd_helo_required=yes" && \
-    postconf -e "virtual_alias_maps=hash:/etc/postfix/virtual"
-
-# エイリアスマップを更新
-RUN newaliases
-
-# ログの設定
+# rsyslog の設定
 RUN echo "*.* /var/log/mail.log" > /etc/rsyslog.d/50-default.conf
 
-# コンテナ起動時のコマンド
+# rsyslog の設定を修正して imklog を無効化
+RUN sed -i '/imklog/d' /etc/rsyslog.conf
+
+# ログディレクトリと権限の設定
+RUN mkdir -p /var/log/mail && \
+    touch /var/log/mail/mail.log && \
+    chown postfix:postfix /var/log/mail/mail.log
+
+# Postfix と rsyslog の起動スクリプト
 CMD ["sh", "-c", "service rsyslog start && postfix start-fg"]
 
 ```

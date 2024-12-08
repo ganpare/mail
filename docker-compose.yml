@@ -15,26 +15,30 @@ services:
       - ./bind:/etc/bind
     restart: always
 
-  smtp-server:
-    build:
-      context: ./
-      dockerfile: ./smtp/Dockerfile
-    container_name: smtp-server
-    networks:
-      mail_network:
-        ipv4_address: 172.19.0.4
-    dns:
-      - 172.19.0.3
-    environment:
-      MAILNAME: smtp.example.local
-    ports:
-      - "1025:25"
-    volumes:
-      - ./smtp_aliases:/etc/aliases
-      - mail_data:/var/mail      # 共有ボリュームをマウント
-    restart: always
-    depends_on:
-      - dns-server
+smtp-server:
+  build:
+    context: ./
+    dockerfile: ./smtp/Dockerfile
+  container_name: smtp-server
+  networks:
+    mail_network:
+      ipv4_address: 172.19.0.4
+  dns:
+    - 172.19.0.3
+  environment:
+    MAILNAME: smtp.example.local
+  ports:
+    - "1025:25"
+  volumes:
+    - ./smtp_aliases:/etc/aliases
+    - mail_data:/var/mail      # 共有ボリュームをマウント
+    - ./smtp_config/postfix/main.cf:/etc/postfix/main.cf
+    - ./smtp_config/postfix/master.cf:/etc/postfix/master.cf
+    - ./smtp_config/postfix/virtual:/etc/postfix/virtual
+  restart: always
+  depends_on:
+    - dns-server
+
 
   pop3-server:
     build:

@@ -11,7 +11,11 @@ mynetworks = 127.0.0.0/8 [::1]/128 172.19.0.0/16
 smtpd_relay_restrictions = permit_mynetworks, reject_unauth_destination
 
 # メール配送設定
-mydestination = $myhostname, localhost.$mydomain, localhost, example.local
+mydestination = $myhostname, localhost.$mydomain, localhost
+
+# 仮想エイリアス設定
+virtual_alias_domains = example.local
+virtual_alias_maps = hash:/etc/postfix/virtual
 
 # その他
 smtpd_banner = $myhostname ESMTP $mail_name
@@ -25,6 +29,7 @@ debugger_command =
     ddd $daemon_directory/$process_name $process_id & sleep 5
 
 compatibility_level = 2
+
 # TLSの設定
 smtpd_tls_security_level = none
 smtp_tls_security_level = may
