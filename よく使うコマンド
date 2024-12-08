@@ -1,0 +1,45 @@
+docker-compose down
+docker-compose up --build -d
+docker exec -it smtp-server nslookup example.local
+docker exec -it app-server nslookup example.local
+docker exec -it client nslookup example.local
+docker exec -it app-server python3 /app/send_mail.py
+docker exec -it smtp-server tail -f /var/log/mail.log
+
+docker ps
+
+
+docker exec -it dns-server bash
+docker exec -it app-server bash
+docker exec -it smtp-server bash
+docker exec -it client sh
+
+
+dig example.local @127.0.0.1
+dig -x 172.19.0.4 @127.0.0.1
+
+
+docker-compose build smtp-server
+docker-compose up -d smtp-server
+
+docker-compose build
+docker-compose up -d
+
+
+docker exec -it smtp-server ls -l /var/mail
+
+docker exec -it smtp-server ls -ld /var/mail/test
+
+docker exec -it smtp-server ls -ld /var/mail/test/Maildir
+
+
+docker exec -it smtp-server ls -ld /var/mail/test/Maildir/new
+
+docker exec -it smtp-server ls -ld /var/mail/test/Maildir/cur
+docker exec -it smtp-server ls -ld /var/mail/test/Maildir/new
+docker exec -it smtp-server ls -ld /var/mail/test/Maildir/tmp
+
+
+docker exec -it smtp-server ls -l /var/mail/test/Maildir/cur
+docker exec -it smtp-server ls -l /var/mail/test/Maildir/new
+docker exec -it smtp-server ls -l /var/mail/test/Maildir/tmp

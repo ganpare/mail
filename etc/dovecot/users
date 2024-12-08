@@ -1,1 +1,1 @@
-test:{PLAIN}password:1000:1000::/home/test::
+test:{PLAIN}password:1000:1000::/var/mail/test:::
