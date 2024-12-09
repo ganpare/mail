@@ -1,0 +1,2 @@
+test:{PLAIN}password:2000:2000::/var/mail/test::
+user:{PLAIN}password:2001:2001::/var/mail/user::

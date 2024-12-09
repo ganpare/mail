@@ -11,11 +11,11 @@ example.local.  IN      A       172.19.0.3  ; ドメイン自身のAレコード
 smtp    IN      A       172.19.0.4  ; SMTPサーバのIPアドレス
 app     IN      A       172.19.0.5  ; アプリサーバのIPアドレス
 client  IN      A       172.19.0.6  ; クライアントのIPアドレス
-pop3    IN      A       172.19.0.7  ; POP3サーバのIPアドレス
+
 
 ; リバースDNSエントリ
 3       IN      PTR     ns.example.local.  ; ns のリバースエントリ
 4       IN      PTR     smtp.example.local. ; smtp のリバースエントリ
 5       IN      PTR     app.example.local.
 6       IN      PTR     client.example.local.
-7       IN      PTR     pop3.example.local.
+

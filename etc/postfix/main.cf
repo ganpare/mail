@@ -36,3 +36,14 @@ smtp_tls_security_level = may
 
 # 接続タイムアウトの設定
 smtpd_helo_required = yes
+<<<<<<< HEAD
+=======
+
+# Maildir形式の設定を追加
+home_mailbox = Maildir/
+
+# Maildir形式の有効化
+mailbox_command =
+mailbox_transport = 
+
+>>>>>>> temp-branch
