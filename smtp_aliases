@@ -1,2 +1,2 @@
 postmaster:    root
-recipient: user  # recipient@example.local を pop3-server の user に転送
+recipient: user

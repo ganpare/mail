@@ -13,44 +13,32 @@ services:
       - ./bind:/etc/bind
     restart: always
 
-
-
   smtp-server:
     build:
-      context: ./  # ビルドのコンテキストをルートディレクトリに設定
-      dockerfile: ./smtp/Dockerfile  # SMTPサーバー用Dockerfileを明示的に指定
+      context: .
+      dockerfile: ./smtp/Dockerfile
     container_name: smtp-server
     networks:
       mail_network:
         ipv4_address: 172.19.0.4
     dns:
-      - 172.19.0.3  # DNSサーバーのIPを明示
+      - 172.19.0.3
     environment:
       MAILNAME: smtp.example.local
     ports:
       - "1025:25"
+      - "110:110"  # POP3ポート追加
     volumes:
-      - ./smtp_aliases:/etc/aliases # smtp_aliases を /etc/aliases にマウント
+      - ./smtp_aliases:/etc/aliases
+      - ./dovecot:/etc/dovecot  # Dovecot設定ファイル追加
+      - mail_data:/var/mail  # 名前付きボリュームに変更
     restart: always
     depends_on:
       - dns-server
+    cap_add:
+      - SYSLOG
 
-  pop3-server:
-    build:
-      context: ./pop3
-    container_name: pop3-server
-    networks:
-      mail_network:
-        ipv4_address: 172.19.0.7
-    ports:
-      - "110:110"    # POP3ポート
-    volumes:
-      - ./pop3/dovecot:/etc/dovecot
-      - ./mail:/var/mail
-    restart: always
-    depends_on:
-      - smtp-server
-      
+
   app-server:
     build: ./app-server
     container_name: app-server
@@ -84,3 +72,6 @@ networks:
     ipam:
       config:
         - subnet: 172.19.0.0/16
+
+volumes:
+  mail_data:

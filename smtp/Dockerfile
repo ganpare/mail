@@ -8,10 +8,14 @@ RUN apt-get update && apt-get install -y \
     iproute2 \
     dnsutils \
     procps \
-    tzdata && \
-    ln -fs /usr/share/zoneinfo/Asia/Tokyo /etc/localtime && \
-    dpkg-reconfigure -f noninteractive tzdata && \
-    apt-get clean
+    tzdata \
+    dovecot-pop3d \
+    dovecot-core \
+    && ln -fs /usr/share/zoneinfo/Asia/Tokyo /etc/localtime \
+    && DEBIAN_FRONTEND=noninteractive dpkg-reconfigure tzdata \
+    && apt-get clean \
+    && groupadd -g 1000 syslog \
+    && useradd -r -m -s /bin/false rsyslog -u 107 -g syslog 
 
 # Postfixの設定ファイルをコピー
 COPY etc/postfix/main.cf /etc/postfix/main.cf
@@ -36,14 +40,24 @@ RUN mkdir -p /var/mail && \
     chmod 755 /var/mail && \
     chown postfix:postfix /var/mail
 
-# ローカルメール用ユーザーの作成
-RUN useradd -m -s /bin/bash test
+# ローカルメール用ユーザーの作成（GIDを変更）
+RUN if ! getent group test > /dev/null; then groupadd -g 2000 test; fi
+RUN useradd -m -s /bin/bash -d /var/mail/test test -u 2000 -g 2000
+RUN if ! getent group user > /dev/null; then groupadd -g 2001 user; fi
+RUN useradd -m -s /bin/bash -d /var/mail/user user -u 2001 -g 2001
+RUN echo "test:password" | chpasswd
+RUN echo "user:password" | chpasswd
 
 # エイリアスマップを更新
 RUN newaliases
 
 # ログの設定
 RUN echo "*.* /var/log/mail.log" > /etc/rsyslog.d/50-default.conf
+RUN chmod 777 /proc/kmsg # /proc/kmsg へのアクセス権限を変更
 
-# コンテナ起動時のコマンド
-CMD ["sh", "-c", "service rsyslog start && postfix start-fg"]
+# 初期化スクリプトをコピー
+COPY smtp/init.sh /init.sh
+RUN chmod +x /init.sh
+
+# コンテナ起動時のコマンドを変更
+CMD ["/init.sh"]
