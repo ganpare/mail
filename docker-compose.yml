@@ -15,50 +15,6 @@ services:
       - ./bind:/etc/bind
     restart: always
 
-<<<<<<< HEAD
-smtp-server:
-  build:
-    context: ./
-    dockerfile: ./smtp/Dockerfile
-  container_name: smtp-server
-  networks:
-    mail_network:
-      ipv4_address: 172.19.0.4
-  dns:
-    - 172.19.0.3
-  environment:
-    MAILNAME: smtp.example.local
-  ports:
-    - "1025:25"
-  volumes:
-    - ./smtp_aliases:/etc/aliases
-    - mail_data:/var/mail      # 共有ボリュームをマウント
-    - ./smtp_config/postfix/main.cf:/etc/postfix/main.cf
-    - ./smtp_config/postfix/master.cf:/etc/postfix/master.cf
-    - ./smtp_config/postfix/virtual:/etc/postfix/virtual
-  restart: always
-  depends_on:
-    - dns-server
-
-
-  pop3-server:
-    build:
-      context: ./ 
-      dockerfile: ./pop3/Dockerfile
-    container_name: pop3-server
-    networks:
-      mail_network:
-        ipv4_address: 172.19.0.7
-    ports:
-      - "110:110"    # POP3ポート
-    volumes:
-      - ./etc/dovecot:/etc/dovecot
-      - mail_data:/var/mail           # 共有ボリュームをマウント
-      - mail_data:/var/log/dovecot    # ログも共有（オプション）
-    restart: always
-    depends_on:
-      - smtp-server
-=======
   smtp-server:
     build:
       context: .
@@ -84,7 +40,6 @@ smtp-server:
     cap_add:
       - SYSLOG
 
->>>>>>> temp-branch
 
   app-server:
     build: ./app-server
@@ -121,8 +76,4 @@ networks:
         - subnet: 172.19.0.0/16
 
 volumes:
-<<<<<<< HEAD
   mail_data:
-=======
-  mail_data:
->>>>>>> temp-branch
