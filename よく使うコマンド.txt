@@ -53,3 +53,7 @@ PASS password
 LIST
 RETR 1
 QUIT
+
+
+docker-compose build --no-cache smtp-server
+docker-compose up -d smtp-server

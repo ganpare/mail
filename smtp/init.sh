@@ -1,23 +1,17 @@
-#!/bin/bash
+#!/bin/sh
+echo "Test script is running!"
 
-# エイリアスマップを更新
-echo "Updating aliases..."
-newaliases
+# ファイル確認
+ls -l /var/mail
+ls -l /etc/postfix
+ls -l /etc/dovecot
 
-# Maildirディレクトリの作成と所有権の設定
-echo "Ensuring Maildir structure..."
-mkdir -p /var/mail/test/Maildir/{cur,new,tmp}
-chown -R test:test /var/mail/test/Maildir
-chmod -R 700 /var/mail/test/Maildir
-
-# SetGIDビットを削除
-chmod -R g-s /var/mail/test/Maildir
-
-# rsyslog と Postfix の起動
-echo "Starting rsyslog and postfix..."
-service rsyslog start
-postfix start-fg &
+# Postfixの確認と起動
+echo "Checking Postfix configuration..."
+postfix check
+echo "Starting Postfix..."
+postfix start
 
 # Dovecotの起動
 echo "Starting Dovecot..."
-dovecot -F
+exec dovecot -F

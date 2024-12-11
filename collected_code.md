@@ -14,9 +14,6 @@
 ├── client/
 │   ├── Dockerfile
 │   └── test_mail.sh
-├── dovecot/
-│   ├── dovecot.conf
-│   └── users
 ├── etc/
 │   ├── dovecot/
 │   │   ├── dovecot.conf
@@ -26,22 +23,13 @@
 │   │   └── master.cf
 │   ├── mailname
 │   └── nsswitch.conf
-<<<<<<< HEAD
-├── mail/
-├── pop3/
-│   └── Dockerfile
-=======
->>>>>>> temp-branch
 ├── smtp/
 │   ├── Dockerfile
 │   └── init.sh
 ├── docker-compose.yml
+├── readme.md
 ├── smtp_aliases
-<<<<<<< HEAD
-└── よく使うコマンド
-=======
 └── よく使うコマンド.txt
->>>>>>> temp-branch
 
 ```
 
@@ -49,19 +37,11 @@
 
 **Language:** yml
 
-<<<<<<< HEAD
-**File Size:** 2164 bytes
-**Created:** 2024-12-08T20:25:28.565683
-**Modified:** 2024-12-09T06:51:55.448169
-=======
-**File Size:** 1739 bytes
-**Created:** 2024-12-09T22:48:38.323964
-**Modified:** 2024-12-09T22:48:38.324964
->>>>>>> temp-branch
+**File Size:** 1604 bytes
+**Created:** 2024-12-10T22:42:31.366498
+**Modified:** 2024-12-10T23:16:36.523503
 
 ```yml
-version: '3.8'
-
 services:
   dns-server:
     build:
@@ -77,50 +57,6 @@ services:
       - ./bind:/etc/bind
     restart: always
 
-<<<<<<< HEAD
-smtp-server:
-  build:
-    context: ./
-    dockerfile: ./smtp/Dockerfile
-  container_name: smtp-server
-  networks:
-    mail_network:
-      ipv4_address: 172.19.0.4
-  dns:
-    - 172.19.0.3
-  environment:
-    MAILNAME: smtp.example.local
-  ports:
-    - "1025:25"
-  volumes:
-    - ./smtp_aliases:/etc/aliases
-    - mail_data:/var/mail      # 共有ボリュームをマウント
-    - ./smtp_config/postfix/main.cf:/etc/postfix/main.cf
-    - ./smtp_config/postfix/master.cf:/etc/postfix/master.cf
-    - ./smtp_config/postfix/virtual:/etc/postfix/virtual
-  restart: always
-  depends_on:
-    - dns-server
-
-
-  pop3-server:
-    build:
-      context: ./ 
-      dockerfile: ./pop3/Dockerfile
-    container_name: pop3-server
-    networks:
-      mail_network:
-        ipv4_address: 172.19.0.7
-    ports:
-      - "110:110"    # POP3ポート
-    volumes:
-      - ./etc/dovecot:/etc/dovecot
-      - mail_data:/var/mail           # 共有ボリュームをマウント
-      - mail_data:/var/log/dovecot    # ログも共有（オプション）
-    restart: always
-    depends_on:
-      - smtp-server
-=======
   smtp-server:
     build:
       context: .
@@ -138,15 +74,13 @@ smtp-server:
       - "110:110"  # POP3ポート追加
     volumes:
       - ./smtp_aliases:/etc/aliases
-      - ./dovecot:/etc/dovecot  # Dovecot設定ファイル追加
+      - ./etc/dovecot:/etc/dovecot
       - mail_data:/var/mail  # 名前付きボリュームに変更
     restart: always
     depends_on:
       - dns-server
     cap_add:
       - SYSLOG
-
->>>>>>> temp-branch
 
   app-server:
     build: ./app-server
@@ -184,10 +118,135 @@ networks:
 
 volumes:
   mail_data:
-<<<<<<< HEAD
 
-=======
->>>>>>> temp-branch
+```
+
+### File: `readme.md`
+
+**Language:** md
+
+**File Size:** 4781 bytes
+**Created:** 2024-12-10T21:19:52.454239
+**Modified:** 2024-12-10T21:19:52.454239
+
+```md
+# メール送受信システム構築 - Dockerを利用したPostfix/Dovecot環境
+
+## システム概要
+
+このシステムは、Docker環境でメール送受信の基礎機能を提供するPostfix（SMTPサーバ）とDovecot（POP3サーバ）を構築したものです。構成はDNSサーバ、SMTPサーバ、アプリサーバ、POP3クライアントからなり、それぞれのコンテナが役割を分担しています。
+
+---
+
+## コンテナ構成
+
+### 1. DNSサーバ (`dns-server`)
+- **役割**:
+  - メールの送受信に使用するドメイン名（`example.local`）の名前解決を担当。
+- **設定内容**:
+  - BINDを利用し、ゾーン情報を設定。
+  - フォワードゾーンとリバースゾーンを設定。
+- **主な設定ファイル**:
+  - `named.conf`: ゾーン情報の定義。
+  - `db.example.local`: 正引きゾーンファイル。
+  - `db.19.172.in-addr.arpa`: 逆引きゾーンファイル。
+
+---
+
+### 2. SMTPサーバ (`smtp-server`)
+- **役割**:
+  - Postfixを使用してメールの送信（SMTP）とローカルメール配信を実現。
+  - Dovecotを使用してメールの受信（POP3）を提供。
+- **設定内容**:
+  - Postfixでローカル配送を設定（Maildir形式でメールを保存）。
+  - DovecotでPOP3プロトコルを有効化。
+  - 各ユーザのホームディレクトリを`/var/mail/<ユーザ名>`に統一。
+- **主な設定ファイル**:
+  - Postfix:
+    - `main.cf`: メール配送の基本設定。
+    - `master.cf`: サービス設定。
+  - Dovecot:
+    - `dovecot.conf`: POP3の設定。
+    - `/etc/dovecot/users`: 認証情報を管理。
+- **補足**:
+  - Postfixがメールをローカルユーザの`Maildir`に保存。
+  - Dovecotがその`Maildir`を参照し、クライアントにメールを提供。
+
+---
+
+### 3. アプリサーバ (`app-server`)
+- **役割**:
+  - Pythonスクリプトを使用してSMTPサーバにメールを送信。
+- **設定内容**:
+  - `send_mail.py`を実行し、指定した宛先にメールを送信。
+- **主な設定ファイル**:
+  - `send_mail.py`: SMTPサーバにメールを送信するスクリプト。
+- **補足**:
+  - メール送信の動作確認用。
+
+---
+
+### 4. クライアント (`client`)
+- **役割**:
+  - POP3クライアントとしてSMTPサーバに接続し、メールを受信。
+- **設定内容**:
+  - `telnet`や`curl`を利用してPOP3サーバへ手動で接続。
+  - `LIST`, `RETR`, `QUIT`コマンドで動作確認を実施。
+- **補足**:
+  - メール受信の確認用。
+
+---
+
+## 問題解決の流れ
+
+### **問題1: POP3クライアントでメールが見えない**
+- **原因**:
+  - Postfixがシステムユーザのホームディレクトリ（`/home/test/Maildir`）にメールを保存。
+  - 一方、Dovecotは`/var/mail/test/Maildir`を参照しており、参照先が一致しなかった。
+- **解決策**:
+  - Dockerfileでユーザのホームディレクトリを`/var/mail/<ユーザ名>`に設定。
+
+---
+
+### **問題2: メールがRFC準拠でない可能性**
+- **原因**:
+  - メール送信スクリプトで`From:`や`To:`ヘッダが省略されていた。
+- **解決策**:
+  - Pythonスクリプトに`From:`, `To:`, `Subject:`ヘッダを追加。
+
+---
+
+### **問題3: 配信メールの保存場所が未確認**
+- **原因**:
+  - 配信されたメールが`/home/test/Maildir`に保存されていたが、確認が遅れた。
+- **解決策**:
+  - Postfixログを確認し、メールの実際の保存先を調査。
+
+---
+
+## システム動作確認
+
+1. **メール送信の確認**:
+   - `app-server`から`send_mail.py`を実行し、SMTPサーバにメールを送信。
+   - Postfixログで「`delivered to maildir`」を確認。
+
+2. **メール受信の確認**:
+   - `client`からPOP3サーバに接続。
+   - `USER`, `PASS`, `LIST`, `RETR`コマンドでメールの受信を確認。
+
+---
+
+## システム全体図
+
+```plaintext
++-----------------+      +-----------------+      +-----------------+      +-----------------+
+|   DNS Server    | ---> |   SMTP Server   | ---> |  App Server     | ---> |  POP3 Client    |
+| (dns-server)    |      | (smtp-server)   |      | (app-server)    |      | (client)        |
++-----------------+      +-----------------+      +-----------------+      +-----------------+
+| Name Resolution |      | Send/Receive    |      | Send Mail        |      | Retrieve Mail   |
+| example.local   |      | Maildir Storage |      | SMTP Protocol    |      | POP3 Protocol   |
++-----------------+      +-----------------+      +-----------------+      +-----------------+
+
 ```
 
 ### File: `smtp_aliases`
@@ -195,34 +254,23 @@ volumes:
 **Language:** 
 
 **File Size:** 36 bytes
-**Created:** 2024-12-08T19:25:26.867989
-**Modified:** 2024-12-09T20:26:32.703783
+**Created:** 2024-12-09T23:34:53.806898
+**Modified:** 2024-12-09T23:34:53.807900
 
 ```
 postmaster:    root
 recipient: user
 ```
 
-<<<<<<< HEAD
-### File: `よく使うコマンド`
-=======
 ### File: `よく使うコマンド.txt`
->>>>>>> temp-branch
 
 **Language:** txt
 
-**File Size:** 1247 bytes
-<<<<<<< HEAD
-**Created:** 2024-12-08T23:51:52.936979
-**Modified:** 2024-12-08T23:51:56.037352
-
-```
-=======
-**Created:** 2024-12-09T21:08:27.547033
-**Modified:** 2024-12-09T21:08:27.604225
+**File Size:** 1406 bytes
+**Created:** 2024-12-11T20:20:20.801213
+**Modified:** 2024-12-11T20:20:20.802212
 
 ```txt
->>>>>>> temp-branch
 docker-compose down
 docker-compose up --build -d
 docker exec -it smtp-server nslookup example.local
@@ -269,6 +317,19 @@ docker exec -it smtp-server ls -l /var/mail/test/Maildir/cur
 docker exec -it smtp-server ls -l /var/mail/test/Maildir/new
 docker exec -it smtp-server ls -l /var/mail/test/Maildir/tmp
 
+
+docker exec -it client sh
+telnet smtp.example.local 110
+
+USER test
+PASS password
+LIST
+RETR 1
+QUIT
+
+
+docker-compose build --no-cache smtp-server
+
 ```
 
 ### File: `app-server\Dockerfile`
@@ -298,9 +359,9 @@ CMD ["sh", "-c", "python3 send_mail.py && tail -f /dev/null"]
 
 **Language:** py
 
-**File Size:** 883 bytes
-**Created:** 2024-12-07T09:44:20.362875
-**Modified:** 2024-12-08T14:11:22.240700
+**File Size:** 948 bytes
+**Created:** 2024-12-09T23:34:53.803900
+**Modified:** 2024-12-09T23:34:53.803900
 
 ```py
 import smtplib
@@ -316,12 +377,13 @@ print(f"Connecting to SMTP server: {smtp_server}:{smtp_port}")
 
 # メール送信設定
 from_email = "test@example.local"
-to_email = "recipient@example.local"
+to_email = "test@example.local"
 subject = "Test Mail from App Server"
 body = "This is a test email sent from app-server via dockerized SMTP server."
 
-# メールフォーマット
-message = f"Subject: {subject}\n\n{body}"
+# メールフォーマットにFrom:やTo:ヘッダを追加
+message = f"From: {from_email}\nTo: {to_email}\nSubject: {subject}\n\n{body}"
+
 
 try:
     # SMTPサーバ接続とメール送信
@@ -339,8 +401,8 @@ except Exception as e:
 **Language:** arpa
 
 **File Size:** 813 bytes
-**Created:** 2024-12-08T14:06:27.894878
-**Modified:** 2024-12-09T21:03:02.330842
+**Created:** 2024-12-09T23:34:53.804900
+**Modified:** 2024-12-09T23:34:53.804900
 
 ```arpa
 $TTL    86400
@@ -364,8 +426,8 @@ $TTL    86400
 **Language:** local
 
 **File Size:** 1436 bytes
-**Created:** 2024-12-06T22:23:27.786121
-**Modified:** 2024-12-09T21:03:12.388028
+**Created:** 2024-12-09T23:34:53.804900
+**Modified:** 2024-12-09T23:34:53.804900
 
 ```local
 $TTL    86400                    ; デフォルトのキャッシュ期間（秒単位）
@@ -506,55 +568,6 @@ telnet smtp.example.local 25
 
 ```
 
-### File: `dovecot\dovecot.conf`
-
-**Language:** conf
-
-**File Size:** 588 bytes
-**Created:** 2024-12-09T19:46:13.023999
-**Modified:** 2024-12-09T22:42:51.362552
-
-```conf
-disable_plaintext_auth = no   # 平文認証を許可（テスト用）
-listen = *                   # 全てのインターフェースでリッスン
-mail_location = maildir:/var/mail/%u/Maildir
-
-
-protocols = pop3             # POP3プロトコルを有効化
-
-service pop3-login {
-  inet_listener pop3 {
-    port = 110               # POP3のデフォルトポート
-  }
-}
-
-passdb {
-  driver = passwd-file       # ユーザー認証にファイルを使用
-  args = /etc/dovecot/users
-}
-
-userdb {
-  driver = passwd
-}
-
-auth_mechanisms = plain      # 認証方式
-
-```
-
-### File: `dovecot\users`
-
-**Language:** 
-
-**File Size:** 122 bytes
-**Created:** 2024-12-09T19:46:13.024998
-**Modified:** 2024-12-09T22:08:43.694541
-
-```
-test:{PLAIN}password:2000:2000::/var/mail/test::userdb_mail
-user:{PLAIN}password:2001:2001::/var/mail/user::userdb_mail
-
-```
-
 ### File: `etc\mailname`
 
 **Language:** 
@@ -595,8 +608,8 @@ netgroup:       nis
 **Language:** conf
 
 **File Size:** 378 bytes
-**Created:** 2024-12-07T14:17:38.497898
-**Modified:** 2024-12-09T06:42:10.224698
+**Created:** 2024-12-09T23:34:24.091979
+**Modified:** 2024-12-09T23:34:24.091979
 
 ```conf
 disable_plaintext_auth = no
@@ -630,8 +643,8 @@ auth_mechanisms = plain
 **Language:** 
 
 **File Size:** 51 bytes
-**Created:** 2024-12-07T14:17:59.085351
-**Modified:** 2024-12-08T23:50:35.351398
+**Created:** 2024-12-09T23:34:24.091979
+**Modified:** 2024-12-09T23:34:24.091979
 
 ```
 test:{PLAIN}password:1000:1000::/var/mail/test:::
@@ -642,15 +655,9 @@ test:{PLAIN}password:1000:1000::/var/mail/test:::
 
 **Language:** cf
 
-<<<<<<< HEAD
 **File Size:** 1007 bytes
-**Created:** 2024-12-07T11:40:37.585436
-**Modified:** 2024-12-09T06:47:35.078729
-=======
-**File Size:** 1013 bytes
-**Created:** 2024-12-09T19:46:13.023999
-**Modified:** 2024-12-09T21:53:43.289921
->>>>>>> temp-branch
+**Created:** 2024-12-09T23:34:53.805900
+**Modified:** 2024-12-10T20:57:17.993707
 
 ```cf
 # サーバ設定
@@ -692,32 +699,15 @@ smtp_tls_security_level = may
 # 接続タイムアウトの設定
 smtpd_helo_required = yes
 
-<<<<<<< HEAD
-=======
-# Maildir形式の設定を追加
-home_mailbox = Maildir/
-
-# Maildir形式の有効化
-mailbox_command =
-mailbox_transport = 
-
-
->>>>>>> temp-branch
 ```
 
 ### File: `etc\postfix\master.cf`
 
 **Language:** cf
 
-<<<<<<< HEAD
 **File Size:** 1949 bytes
-**Created:** 2024-12-07T22:02:14.202922
-**Modified:** 2024-12-08T23:10:10.228977
-=======
-**File Size:** 901 bytes
-**Created:** 2024-12-09T19:46:13.023999
-**Modified:** 2024-12-09T19:46:13.023999
->>>>>>> temp-branch
+**Created:** 2024-12-09T23:34:24.092974
+**Modified:** 2024-12-09T23:34:24.092974
 
 ```cf
 #
@@ -750,7 +740,6 @@ relay     unix  -       -       n       -       -       smtp
 smtp      unix  -       -       n       -       -       smtp
 retry     unix  -       -       n       -       -       error
 local     unix  -       n       n       -       -       local
-<<<<<<< HEAD
 #
 # Additional services
 #
@@ -759,71 +748,13 @@ discard   unix  -       -       n       -       -       discard
 showq     unix  n       -       n       -       -       showq
 ```
 
-### File: `pop3\Dockerfile`
-
-**Language:** 
-
-**File Size:** 1428 bytes
-**Created:** 2024-12-07T14:16:55.544774
-**Modified:** 2024-12-08T23:53:18.748005
-
-```
-FROM debian:bullseye-slim
-
-# 必要なパッケージをインストール
-RUN apt-get update && apt-get install -y \
-    dovecot-pop3d \
-    dovecot-core \
-    && apt-get clean
-
-# ローカルユーザーとグループの作成
-# UIDとGIDはsmtp-serverと一致させる（ここでは1000）
-RUN groupadd -g 1000 test && \
-    useradd -m -s /bin/bash -u 1000 -g test test
-
-# Dovecotの設定ファイルを適切な場所にコピー
-COPY etc/dovecot/dovecot.conf /etc/dovecot/dovecot.conf
-COPY etc/dovecot/users /etc/dovecot/users
-
-# メールスプールディレクトリとMaildir構造の作成
-RUN mkdir -p /var/mail/test/Maildir/{cur,new,tmp} && \
-    chown -R test:test /var/mail/test && \
-    chmod -R 700 /var/mail/test
-
-# Dovecotのユーザー情報ファイルの権限を設定
-RUN chmod 600 /etc/dovecot/users && \
-    chown test:test /etc/dovecot/users
-
-# Dovecotのログディレクトリを作成
-RUN mkdir -p /var/log/dovecot && \
-    touch /var/log/dovecot/dovecot.log && \
-    chown test:test /var/log/dovecot/dovecot.log
-
-# Dovecotのログ設定を更新（必要に応じて）
-RUN echo "log_path = /var/log/dovecot/dovecot.log" >> /etc/dovecot/conf.d/10-logging.conf && \
-    echo "auth_verbose = yes" >> /etc/dovecot/conf.d/10-auth.conf && \
-    echo "mail_debug = yes" >> /etc/dovecot/conf.d/10-mail.conf
-
-# デフォルトコマンド
-CMD ["dovecot", "-F"]
-=======
->>>>>>> temp-branch
-
-```
-
 ### File: `smtp\Dockerfile`
 
 **Language:** 
 
-<<<<<<< HEAD
-**File Size:** 1623 bytes
-**Created:** 2024-12-07T11:17:12.979747
-**Modified:** 2024-12-09T06:50:54.136784
-=======
-**File Size:** 2173 bytes
-**Created:** 2024-12-09T19:46:13.024998
-**Modified:** 2024-12-09T22:23:55.526244
->>>>>>> temp-branch
+**File Size:** 2218 bytes
+**Created:** 2024-12-10T20:46:37.669969
+**Modified:** 2024-12-11T18:16:58.614940
 
 ```
 FROM debian:bullseye-slim
@@ -837,41 +768,26 @@ RUN apt-get update && apt-get install -y \
     dnsutils \
     procps \
     tzdata \
-<<<<<<< HEAD
-    telnet \
-    strace \
-    tree && \
-    ln -fs /usr/share/zoneinfo/Asia/Tokyo /etc/localtime && \
-    dpkg-reconfigure -f noninteractive tzdata && \
-    apt-get clean
-=======
     dovecot-pop3d \
     dovecot-core \
+    bash \
     && ln -fs /usr/share/zoneinfo/Asia/Tokyo /etc/localtime \
     && DEBIAN_FRONTEND=noninteractive dpkg-reconfigure tzdata \
     && apt-get clean \
     && groupadd -g 1000 syslog \
-    && useradd -r -m -s /bin/false rsyslog -u 107 -g syslog 
->>>>>>> temp-branch
+    && useradd -r -m -s /bin/false rsyslog -u 107 -g syslog
 
-# ローカルユーザーとグループの作成
-RUN groupadd -g 1000 test && \
-    useradd -m -s /bin/bash -u 1000 -g test -d /var/mail/test test
+# Postfixの設定ファイルをコピー
+COPY etc/postfix/main.cf /etc/postfix/main.cf
+COPY etc/postfix/master.cf /etc/postfix/master.cf
 
-# Maildir ディレクトリの作成と権限設定
-RUN mkdir -p /var/mail/test/Maildir/{cur,new,tmp} && \
-    chown -R test:test /var/mail/test && \
-    chmod -R 700 /var/mail/test
+# /etc/aliases ファイルの作成（ただし newaliases は後で実行）
+RUN echo "root: postmaster" > /etc/aliases
 
-# Postfix の設定ファイルをコピー
-COPY smtp_config/postfix/main.cf /etc/postfix/main.cf
-COPY smtp_config/postfix/master.cf /etc/postfix/master.cf
-COPY smtp_config/postfix/virtual /etc/postfix/virtual
+# 必要なソケットディレクトリを作成し、所有権を設定
+RUN mkdir -p /var/spool/postfix/private && \
+    chown -R postfix:postfix /var/spool/postfix/private
 
-<<<<<<< HEAD
-# 仮想エイリアスマップのコンパイル
-RUN postmap /etc/postfix/virtual
-=======
 # 仮想アドレスマップの作成
 RUN mkdir -p /etc/postfix && \
     echo "recipient@example.local test" > /etc/postfix/virtual && \
@@ -886,56 +802,37 @@ RUN mkdir -p /var/mail && \
 
 # ローカルメール用ユーザーの作成（GIDを変更）
 RUN if ! getent group test > /dev/null; then groupadd -g 2000 test; fi
-RUN useradd -m -s /bin/bash test -u 2000 -g 2000
+RUN useradd -m -s /bin/bash -d /var/mail/test test -u 2000 -g 2000
 RUN if ! getent group user > /dev/null; then groupadd -g 2001 user; fi
-RUN useradd -m -s /bin/bash user -u 2001 -g 2001
+RUN useradd -m -s /bin/bash -d /var/mail/user user -u 2001 -g 2001
 RUN echo "test:password" | chpasswd
 RUN echo "user:password" | chpasswd
 
 # エイリアスマップを更新
 RUN newaliases
->>>>>>> temp-branch
 
-# /etc/aliases の設定と更新
-RUN echo "postmaster: root" > /etc/aliases && \
-    newaliases
-
-# rsyslog の設定
+# ログの設定
 RUN echo "*.* /var/log/mail.log" > /etc/rsyslog.d/50-default.conf
 RUN chmod 777 /proc/kmsg # /proc/kmsg へのアクセス権限を変更
 
-<<<<<<< HEAD
-# rsyslog の設定を修正して imklog を無効化
-RUN sed -i '/imklog/d' /etc/rsyslog.conf
-
-# ログディレクトリと権限の設定
-RUN mkdir -p /var/log/mail && \
-    touch /var/log/mail/mail.log && \
-    chown postfix:postfix /var/log/mail/mail.log
-
-# Postfix と rsyslog の起動スクリプト
-CMD ["sh", "-c", "service rsyslog start && postfix start-fg"]
-=======
 # 初期化スクリプトをコピー
 COPY smtp/init.sh /init.sh
 RUN chmod +x /init.sh
 
 # コンテナ起動時のコマンドを変更
 CMD ["/init.sh"]
->>>>>>> temp-branch
-
 ```
 
 ### File: `smtp\init.sh`
 
 **Language:** sh
 
-**File Size:** 542 bytes
-**Created:** 2024-12-08T13:25:54.924092
-**Modified:** 2024-12-09T22:30:42.912404
+**File Size:** 561 bytes
+**Created:** 2024-12-09T23:34:53.806898
+**Modified:** 2024-12-11T18:16:39.203758
 
 ```sh
-#!/bin/bash
+#!/bin/sh
 
 # エイリアスマップを更新
 echo "Updating aliases..."
@@ -958,6 +855,5 @@ postfix start-fg &
 # Dovecotの起動
 echo "Starting Dovecot..."
 dovecot -F
-
 ```
 

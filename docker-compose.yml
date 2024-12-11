@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   dns-server:
     build:
@@ -32,14 +30,13 @@ services:
       - "110:110"  # POP3ポート追加
     volumes:
       - ./smtp_aliases:/etc/aliases
-      - ./dovecot:/etc/dovecot  # Dovecot設定ファイル追加
+      - ./etc/dovecot:/etc/dovecot
       - mail_data:/var/mail  # 名前付きボリュームに変更
     restart: always
     depends_on:
       - dns-server
     cap_add:
       - SYSLOG
-
 
   app-server:
     build: ./app-server
