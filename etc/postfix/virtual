@@ -1,0 +1,7 @@
+test@example.local       test
+recipient@example.local  test
+admin@example.local      admin
+info@example.local       support@example.local
+help@example.local       test@example.local
+noreply@example.local    /dev/null
+@example.local           catchall
